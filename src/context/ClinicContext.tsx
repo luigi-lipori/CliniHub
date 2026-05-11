@@ -20,9 +20,16 @@ interface ClinicContextType {
   ehrRecords: EHRRecord[];
   setEhrRecords: React.Dispatch<React.SetStateAction<EHRRecord[]>>;
   
-  // Helpers
+  // Helpers de Criação
   addPatient: (patient: Omit<Patient, 'id' | 'createdAt'>) => void;
-  addAppointment: (appointment: Omit<Appointment, 'id'>) => boolean; // returns false if conflict
+  addDoctor: (doctor: Omit<Doctor, 'id'>) => void; 
+  addRoom: (room: Omit<Room, 'id'>) => void;    
+  addAppointment: (appointment: Omit<Appointment, 'id'>) => boolean;
+
+  // Helpers de Edição
+  updatePatient: (id: string, updates: Partial<Patient>) => void;
+  updateDoctor: (id: string, updates: Partial<Doctor>) => void;
+  updateRoom: (id: string, updates: Partial<Room>) => void;
   updateAppointment: (id: string, updates: Partial<Appointment>) => void;
 }
 
@@ -69,7 +76,7 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Persistence
+  // Persistência
   useEffect(() => { localStorage.setItem('clinihub_user', JSON.stringify(currentUser)); }, [currentUser]);
   useEffect(() => { localStorage.setItem('clinihub_patients', JSON.stringify(patients)); }, [patients]);
   useEffect(() => { localStorage.setItem('clinihub_doctors', JSON.stringify(doctors)); }, [doctors]);
@@ -77,34 +84,41 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => { localStorage.setItem('clinihub_appointments', JSON.stringify(appointments)); }, [appointments]);
   useEffect(() => { localStorage.setItem('clinihub_ehr', JSON.stringify(ehrRecords)); }, [ehrRecords]);
 
+  // FUNÇÕES DE ADIÇÃO
   const addPatient = (patientData: Omit<Patient, 'id' | 'createdAt'>) => {
-    const newPatient: Patient = {
-      ...patientData,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-    };
+    const newPatient: Patient = { ...patientData, id: Math.random().toString(36).substr(2, 9), createdAt: new Date().toISOString() };
     setPatients(prev => [...prev, newPatient]);
   };
 
-  const checkConflict = (newApp: Omit<Appointment, 'id'>) => {
-    const newStart = new Date(newApp.dateTime).getTime();
-    const newEnd = newStart + newApp.durationMinutes * 60000;
-
-    return appointments.some(app => {
-      if (app.status === 'cancelled') return false;
-      const appStart = new Date(app.dateTime).getTime();
-      const appEnd = appStart + app.durationMinutes * 60000;
-
-      // Conflict if same doctor OR same room at same time
-      const timeOverlap = (newStart < appEnd && newEnd > appStart);
-      return timeOverlap && (app.doctorId === newApp.doctorId || app.roomId === newApp.roomId);
-    });
+  const addDoctor = (doctorData: Omit<Doctor, 'id'>) => {
+    const newDoctor: Doctor = { ...doctorData, id: `dr-${Math.random().toString(36).substr(2, 5)}` };
+    setDoctors(prev => [...prev, newDoctor]);
   };
 
-  const addAppointment = (appointmentData: Omit<Appointment, 'id'>) => {
+  const addRoom = (roomData: Omit<Room, 'id'>) => {
+    const newRoom: Room = { ...roomData, id: `sala-${Math.random().toString(36).substr(2, 5)}` };
+    setRooms(prev => [...prev, newRoom]);
+  };
+
+const addAppointment = (appointmentData: Omit<Appointment, 'id'>) => {
+    const doctor = doctors.find(d => d.id === appointmentData.doctorId);
+    const room = rooms.find(r => r.id === appointmentData.roomId);
+
+    if (doctor && room) {
+      const isGeral = room.description === "Geral";
+      const isCompatible = room.description === doctor.specialty;
+
+      // Se não for geral nem compatível, bloqueia o agendamento
+      if (!isGeral && !isCompatible) {
+        return false; 
+      }
+    }
+
+    // 2. Mantém o check de conflito de horário que já tínhamos
     if (checkConflict(appointmentData)) {
       return false;
     }
+
     const newApp: Appointment = {
       ...appointmentData,
       id: Math.random().toString(36).substr(2, 9),
@@ -113,8 +127,33 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return true;
   };
 
+  // FUNÇÕES DE ATUALIZAÇÃO (UPDATE)
+  const updatePatient = (id: string, updates: Partial<Patient>) => {
+    setPatients(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+  };
+
+  const updateDoctor = (id: string, updates: Partial<Doctor>) => {
+    setDoctors(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
+  };
+
+  const updateRoom = (id: string, updates: Partial<Room>) => {
+    setRooms(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+  };
+
   const updateAppointment = (id: string, updates: Partial<Appointment>) => {
     setAppointments(prev => prev.map(app => app.id === id ? { ...app, ...updates } : app));
+  };
+
+  const checkConflict = (newApp: Omit<Appointment, 'id'>) => {
+    const newStart = new Date(newApp.dateTime).getTime();
+    const newEnd = newStart + newApp.durationMinutes * 60000;
+    return appointments.some(app => {
+      if (app.status === 'cancelled') return false;
+      const appStart = new Date(app.dateTime).getTime();
+      const appEnd = appStart + app.durationMinutes * 60000;
+      const timeOverlap = (newStart < appEnd && newEnd > appStart);
+      return timeOverlap && (app.doctorId === newApp.doctorId || app.roomId === newApp.roomId);
+    });
   };
 
   return (
@@ -125,7 +164,8 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       rooms, setRooms,
       appointments, setAppointments,
       ehrRecords, setEhrRecords,
-      addPatient, addAppointment, updateAppointment
+      addPatient, addDoctor, addRoom, addAppointment,
+      updatePatient, updateDoctor, updateRoom, updateAppointment
     }}>
       {children}
     </ClinicContext.Provider>
