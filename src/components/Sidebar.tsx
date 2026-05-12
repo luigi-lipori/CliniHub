@@ -18,7 +18,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) =>
     { id: 'doctors', label: 'Corpo Clínico', icon: UserCircle },
     { id: 'patients', label: 'Pacientes', icon: Users },
     { id: 'rooms', label: 'Salas', icon: DoorOpen },
-    { id: 'ehr', label: 'Prontuários', icon: ClipboardList },
     { id: 'config', label: 'Configurações', icon: Settings },
   ];
 

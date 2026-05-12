@@ -3,11 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState } from 'react';
 import { ClinicProvider } from './context/ClinicContext';
 import { Sidebar } from './components/Sidebar';
@@ -18,15 +13,17 @@ import { RoomList } from './components/RoomList';
 import { EHRView } from './components/EHRView';
 import { AppointmentModal } from './components/AppointmentModal';
 import { motion, AnimatePresence } from 'motion/react';
+import { DoctorDashboard } from './components/DoctorDashboard';
+import { DoctorSchedule } from './components/DoctorSchedule';
 
 const AppContent: React.FC = () => {
   const [activeView, setActiveView] = useState('agenda');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [accessDoctorEHR, setAccessDoctorEHR] = useState<string | null>(null);
 
-  const handleAccessEHR = (doctorName: string) => {
+  const handleAccessRestrito = (doctorName: string) => {
     setAccessDoctorEHR(doctorName);
-    setActiveView('ehr-view');
+    setActiveView('doctor-dashboard');
   };
 
   const renderView = () => {
@@ -34,7 +31,7 @@ const AppContent: React.FC = () => {
       case 'agenda':
         return <AppointmentDashboard onNewAppointment={() => setIsModalOpen(true)} />;
       case 'doctors':
-        return <DoctorList onAccessEHR={handleAccessEHR} />;
+        return <DoctorList onAccessRestrito={handleAccessRestrito} />;
       case 'patients':
         return <PatientList />;
       case 'rooms':
@@ -56,7 +53,21 @@ const AppContent: React.FC = () => {
         return (
           <EHRView 
             doctorName={accessDoctorEHR || 'Médico'} 
-            onBack={() => setActiveView('doctors')} 
+            onBack={() => setActiveView('doctor-dashboard')} 
+          />
+        );
+      case 'doctor-dashboard':
+        return (
+          <DoctorDashboard 
+            doctorName={accessDoctorEHR || 'Médico'} 
+            onViewChange={setActiveView} 
+          />
+        );
+      case 'doctor-schedule':
+        return (
+          <DoctorSchedule 
+            doctorName={accessDoctorEHR || 'Médico'} 
+            onBack={() => setActiveView('doctor-dashboard')} 
           />
         );
       case 'config':
@@ -71,6 +82,7 @@ const AppContent: React.FC = () => {
     }
   };
 
+  // Aqui é onde o return com os novos títulos do header foi "enfiado"
   return (
     <div className="flex bg-clini-bg min-h-screen">
       <Sidebar activeView={activeView} onViewChange={setActiveView} />
@@ -84,6 +96,8 @@ const AppContent: React.FC = () => {
                activeView === 'patients' ? 'Gestão de Pacientes' :
                activeView === 'rooms' ? 'Infraestrutura' :
                activeView === 'ehr' ? 'Prontuários' :
+               activeView === 'doctor-dashboard' ? 'Acesso Restrito' :
+               activeView === 'doctor-schedule' ? 'Gerenciamento de Grade' :
                activeView === 'ehr-view' ? 'Prontuário Eletrônico' : 'Configurações'}
             </h1>
             <p className="text-slate-500 mt-1 font-medium italic">Bem-vindo ao CliniHub v1.0</p>

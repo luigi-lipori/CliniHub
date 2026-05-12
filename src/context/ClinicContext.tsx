@@ -20,6 +20,10 @@ interface ClinicContextType {
   ehrRecords: EHRRecord[];
   setEhrRecords: React.Dispatch<React.SetStateAction<EHRRecord[]>>;
   
+  // --- NOVAS TIPAGENS DA GRADE DE HORÁRIOS ---
+  doctorSchedules: Record<string, string[]>;
+  updateDoctorSchedule: (doctorName: string, slots: string[]) => void;
+  
   // Helpers de Criação
   addPatient: (patient: Omit<Patient, 'id' | 'createdAt'>) => void;
   addDoctor: (doctor: Omit<Doctor, 'id'>) => void; 
@@ -76,6 +80,12 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return saved ? JSON.parse(saved) : [];
   });
 
+  // --- NOVO ESTADO DA GRADE DE HORÁRIOS ---
+  const [doctorSchedules, setDoctorSchedules] = useState<Record<string, string[]>>(() => {
+    const saved = localStorage.getItem('clinihub_schedules');
+    return saved ? JSON.parse(saved) : {};
+  });
+
   // Persistência
   useEffect(() => { localStorage.setItem('clinihub_user', JSON.stringify(currentUser)); }, [currentUser]);
   useEffect(() => { localStorage.setItem('clinihub_patients', JSON.stringify(patients)); }, [patients]);
@@ -83,6 +93,17 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => { localStorage.setItem('clinihub_rooms', JSON.stringify(rooms)); }, [rooms]);
   useEffect(() => { localStorage.setItem('clinihub_appointments', JSON.stringify(appointments)); }, [appointments]);
   useEffect(() => { localStorage.setItem('clinihub_ehr', JSON.stringify(ehrRecords)); }, [ehrRecords]);
+  
+  // --- NOVA PERSISTÊNCIA DA GRADE ---
+  useEffect(() => { localStorage.setItem('clinihub_schedules', JSON.stringify(doctorSchedules)); }, [doctorSchedules]);
+
+  // --- FUNÇÃO PARA ATUALIZAR A GRADE ---
+  const updateDoctorSchedule = (doctorName: string, slots: string[]) => {
+    setDoctorSchedules(prev => ({
+      ...prev,
+      [doctorName]: slots
+    }));
+  };
 
   // FUNÇÕES DE ADIÇÃO
   const addPatient = (patientData: Omit<Patient, 'id' | 'createdAt'>) => {
@@ -100,7 +121,7 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setRooms(prev => [...prev, newRoom]);
   };
 
-const addAppointment = (appointmentData: Omit<Appointment, 'id'>) => {
+  const addAppointment = (appointmentData: Omit<Appointment, 'id'>) => {
     const doctor = doctors.find(d => d.id === appointmentData.doctorId);
     const room = rooms.find(r => r.id === appointmentData.roomId);
 
@@ -164,6 +185,7 @@ const addAppointment = (appointmentData: Omit<Appointment, 'id'>) => {
       rooms, setRooms,
       appointments, setAppointments,
       ehrRecords, setEhrRecords,
+      doctorSchedules, updateDoctorSchedule, // --- ADICIONADO AQUI NO PROVIDER ---
       addPatient, addDoctor, addRoom, addAppointment,
       updatePatient, updateDoctor, updateRoom, updateAppointment
     }}>
