@@ -4,11 +4,9 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Patient, Doctor, Room, Appointment, EHRRecord, UserRole, UserProfile } from '../types';
+import { Patient, Doctor, Room, Appointment, EHRRecord, UserProfile } from '../types';
 
 interface ClinicContextType {
-  currentUser: UserProfile | null;
-  setCurrentUser: (user: UserProfile | null) => void;
   patients: Patient[];
   setPatients: React.Dispatch<React.SetStateAction<Patient[]>>;
   doctors: Doctor[];
@@ -36,7 +34,7 @@ interface ClinicContextType {
   updateRoom: (id: string, updates: Partial<Room>) => void;
   updateAppointment: (id: string, updates: Partial<Appointment>) => void;
 
-  // --- NOVOS HELPERS DE EXCLUSÃO (LIXO) ---
+  // Helpers de Exclusão
   removePatient: (id: string) => void;
   removeDoctor: (id: string) => void;
   removeRoom: (id: string) => void;
@@ -48,12 +46,12 @@ const ClinicContext = createContext<ClinicContextType | undefined>(undefined);
 export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     const saved = localStorage.getItem('clinihub_user');
-    return saved ? JSON.parse(saved) : { id: 'admin-1', name: 'Admin', role: UserRole.RECEPTIONIST, email: 'admin@clinihub.com' };
+    return saved ? JSON.parse(saved) : { id: 'admin-1', name: 'Admin', email: 'admin@clinihub.com' };
   });
 
   const [patients, setPatients] = useState<Patient[]>(() => {
     const saved = localStorage.getItem('clinihub_patients');
-    return saved ? JSON.parse(saved) : []; // Removi os dados iniciais conforme solicitado anteriormente
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [doctors, setDoctors] = useState<Doctor[]>(() => {
@@ -81,7 +79,7 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return saved ? JSON.parse(saved) : {};
   });
 
-  // Persistência
+  // Persistência no local storage -> temporário
   useEffect(() => { localStorage.setItem('clinihub_user', JSON.stringify(currentUser)); }, [currentUser]);
   useEffect(() => { localStorage.setItem('clinihub_patients', JSON.stringify(patients)); }, [patients]);
   useEffect(() => { localStorage.setItem('clinihub_doctors', JSON.stringify(doctors)); }, [doctors]);
@@ -94,7 +92,7 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setDoctorSchedules(prev => ({ ...prev, [doctorName]: slots }));
   };
 
-  // FUNÇÕES DE ADIÇÃO
+  // Adição
   const addPatient = (patientData: Omit<Patient, 'id' | 'createdAt'>) => {
     const newPatient: Patient = { ...patientData, id: Math.random().toString(36).substr(2, 9), createdAt: new Date().toISOString() };
     setPatients(prev => [...prev, newPatient]);
@@ -127,7 +125,7 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return true;
   };
 
-  // FUNÇÕES DE ATUALIZAÇÃO
+  // Atualização
   const updatePatient = (id: string, updates: Partial<Patient>) => {
     setPatients(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
   };
@@ -144,7 +142,7 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setAppointments(prev => prev.map(app => app.id === id ? { ...app, ...updates } : app));
   };
 
-  // --- NOVAS FUNÇÕES DE EXCLUSÃO (REMOVE) ---
+  // Exclusão
   const removePatient = (id: string) => {
     setPatients(prev => prev.filter(p => p.id !== id));
   };
@@ -174,11 +172,7 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const canDoctorAccessPatient = (doctorId: string, patientId: string) => {
-    
-    if (currentUser?.role === UserRole.RECEPTIONIST) return false;
-
-    // Verifica se existe pelo menos uma consulta marcada entre este médico e este paciente
-    // que não tenha sido cancelada.
+    // Se existe consulta médico <-> paciente
     return appointments.some(app => 
       app.doctorId === doctorId && 
       app.patientId === patientId
@@ -187,7 +181,6 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   return (
     <ClinicContext.Provider value={{
-      currentUser, setCurrentUser,
       patients, setPatients,
       doctors, setDoctors,
       rooms, setRooms,
