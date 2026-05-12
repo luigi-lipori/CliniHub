@@ -5,7 +5,10 @@
 
 import React, { useState } from 'react';
 import { useClinic } from '../context/ClinicContext';
-import { UserCircle, Shield, ArrowRight, Plus, X, Check, Mail, Award, Contact, ChevronDown, Lock, AlertCircle } from 'lucide-react';
+import { 
+  UserCircle, Shield, ArrowRight, Plus, X, Check, 
+  Mail, Award, Contact, ChevronDown, Lock, AlertCircle, Trash2 
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const SPECIALTIES = [
@@ -15,9 +18,10 @@ const SPECIALTIES = [
 ];
 
 export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }> = ({ onAccessEHR }) => {
-  const { doctors, addDoctor } = useClinic();
+  const { doctors, addDoctor, removeDoctor } = useClinic();
   
   const [isAdding, setIsAdding] = useState(false);
+  const [crmError, setCrmError] = useState(false);
   const [newDoctorData, setNewDoctorData] = useState({
     name: '',
     specialty: 'Clínica Médica',
@@ -29,24 +33,21 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
   const [selectedDoctor, setSelectedDoctor] = useState<any | null>(null);
   const [passwordInput, setPasswordInput] = useState('');
   const [errorModal, setErrorModal] = useState(false);
-  
-  // Estado para erro de CRM duplicado
-  const [crmError, setCrmError] = useState(false);
 
   const handleSaveDoctor = (e: React.FormEvent) => {
     e.preventDefault();
     setCrmError(false);
 
-    // 1. Validação de CRM Existente
+    // Validação de CRM duplicado
     const crmExists = doctors.some(doc => doc.crm.trim().toLowerCase() === newDoctorData.crm.trim().toLowerCase());
     
     if (crmExists) {
       setCrmError(true);
-      return; // Interrompe a execução
+      return;
     }
 
     if (!newDoctorData.name.trim() || !newDoctorData.password.trim()) {
-        alert("Nome e Senha são obrigatórios");
+        alert("Nome e Senha são campos obrigatórios.");
         return;
     }
 
@@ -55,7 +56,7 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
       specialty: newDoctorData.specialty,
       crm: newDoctorData.crm || '00000-UF',
       email: newDoctorData.email || 'contato@clinihub.com',
-      password: newDoctorData.password
+      password: newDoctorData.password 
     });
 
     setNewDoctorData({ name: '', specialty: 'Clínica Médica', crm: '', email: '', password: '' });
@@ -84,7 +85,9 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
         <button 
           onClick={() => { setIsAdding(!isAdding); setCrmError(false); }}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-md ${
-            isAdding ? 'bg-slate-100 text-slate-500' : 'bg-primary text-white hover:bg-primary/90'
+            isAdding 
+            ? 'bg-slate-100 text-slate-500' 
+            : 'bg-primary text-white hover:bg-primary/90 shadow-primary/10'
           }`}
         >
           {isAdding ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
@@ -128,12 +131,11 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
               </div>
 
-              {/* CAMPO CRM COM VALIDAÇÃO */}
               <div className="relative">
                 <Contact className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${crmError ? 'text-red-500' : 'text-slate-400'}`} />
                 <input 
                   type="text" placeholder="CRM" 
-                  className={`${inputClassName} ${crmError ? 'border-red-500 ring-red-50 focus:border-red-500 focus:ring-red-200' : ''}`}
+                  className={`${inputClassName} ${crmError ? 'border-red-500 ring-red-50 focus:border-red-500' : ''}`}
                   value={newDoctorData.crm} onChange={(e) => { setNewDoctorData(p => ({...p, crm: e.target.value})); setCrmError(false); }}
                   required
                 />
@@ -165,7 +167,7 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
             )}
 
             <div className="flex justify-end pt-2">
-              <button type="submit" className="bg-secondary text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-secondary/90 transition-all shadow-lg">
+              <button type="submit" className="bg-secondary text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/10">
                 <Check className="w-5 h-5" /> Salvar Médico
               </button>
             </div>
@@ -173,7 +175,6 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
         )}
       </AnimatePresence>
 
-      {/* ... Restante do código dos Cards e Modal de Senha permanecem iguais ... */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {doctors.map((doctor) => (
           <motion.div 
@@ -186,8 +187,23 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
               <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-secondary/10 group-hover:text-secondary transition-colors">
                 <UserCircle className="w-8 h-8" />
               </div>
-              <div className="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                {doctor.specialty}
+              
+              <div className="flex flex-col items-end gap-2">
+                <div className="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  {doctor.specialty}
+                </div>
+                {/* Botão de Excluir Médico */}
+                <button 
+                  onClick={() => {
+                    if(confirm(`Deseja remover o(a) Dr(a). ${doctor.name}?`)) {
+                      removeDoctor(doctor.id);
+                    }
+                  }}
+                  className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                  title="Excluir Médico"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
             
@@ -217,7 +233,13 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
               exit={{ opacity: 0, y: 20 }}
               className="bg-white w-full max-w-sm rounded-3xl p-8 shadow-2xl relative"
             >
-              <button onClick={() => { setSelectedDoctor(null); setErrorModal(false); setPasswordInput(''); }} className="absolute top-6 right-6 text-slate-400">&times;</button>
+              <button 
+                onClick={() => { setSelectedDoctor(null); setErrorModal(false); setPasswordInput(''); }} 
+                className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              
               <div className="text-center mb-8">
                 <div className="w-16 h-16 bg-secondary/10 text-secondary rounded-full flex items-center justify-center mx-auto mb-4">
                   <Shield className="w-8 h-8" />
@@ -225,14 +247,29 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
                 <h3 className="text-xl font-bold text-primary">Acesso Restrito</h3>
                 <p className="text-sm text-slate-500 mt-2">{selectedDoctor.name}</p>
               </div>
+
               <form onSubmit={handleAccess} className="space-y-4">
                 <input 
-                  type="password" placeholder="Digite sua senha" autoFocus
-                  className={`w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 ${errorModal ? 'border-red-500 ring-red-100' : 'border-slate-200 ring-secondary/10'}`}
-                  value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)}
+                  type="password" 
+                  placeholder="••••••••" 
+                  autoFocus
+                  className={`w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 ${
+                    errorModal ? 'border-red-500 ring-red-100' : 'border-slate-200 ring-secondary/10'
+                  }`}
+                  value={passwordInput} 
+                  onChange={(e) => { setPasswordInput(e.target.value); setErrorModal(false); }}
                 />
-                {errorModal && <p className="text-xs text-red-500 font-medium">Senha incorreta. Tente novamente.</p>}
-                <button type="submit" className="w-full py-4 bg-secondary text-white rounded-xl font-bold shadow-lg">Confirmar</button>
+                
+                {errorModal && (
+                  <p className="text-xs text-red-500 font-semibold text-center">Senha incorreta. Verifique os dados.</p>
+                )}
+
+                <button 
+                  type="submit" 
+                  className="w-full py-4 bg-secondary text-white rounded-xl font-bold shadow-lg hover:bg-secondary/90 transition-all active:scale-[0.98]"
+                >
+                  Confirmar Acesso
+                </button>
               </form>
             </motion.div>
           </div>

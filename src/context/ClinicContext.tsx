@@ -31,11 +31,16 @@ interface ClinicContextType {
   updateDoctor: (id: string, updates: Partial<Doctor>) => void;
   updateRoom: (id: string, updates: Partial<Room>) => void;
   updateAppointment: (id: string, updates: Partial<Appointment>) => void;
+
+  // 1. ADICIONADO NA INTERFACE: Helpers de Remoção
+  removeDoctor: (id: string) => void;
+  removeRoom: (id: string) => void;
 }
 
 const ClinicContext = createContext<ClinicContextType | undefined>(undefined);
 
 export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // ... (Estados iniciais permanecem os mesmos)
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     const saved = localStorage.getItem('clinihub_user');
     return saved ? JSON.parse(saved) : { id: 'admin-1', name: 'Admin', role: UserRole.RECEPTIONIST, email: 'admin@clinihub.com' };
@@ -43,9 +48,7 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const [patients, setPatients] = useState<Patient[]>(() => {
     const saved = localStorage.getItem('clinihub_patients');
-    return saved ? JSON.parse(saved) : [
-       { id: '1', name: 'João Silva', cpf: '123.456.789-00', birthDate: '1985-05-20', phone: '(41) 99999-9999', createdAt: new Date().toISOString() }
-    ];
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [doctors, setDoctors] = useState<Doctor[]>(() => {
@@ -66,9 +69,7 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
     const saved = localStorage.getItem('clinihub_appointments');
-    return saved ? JSON.parse(saved) : [
-      { id: 'app-1', patientId: '1', patientName: 'João Silva', doctorId: 'dr-1', doctorName: 'Dr. Valêncio', roomId: 'sala-1', roomName: 'Sala 01', dateTime: new Date().toISOString(), durationMinutes: 30, status: 'scheduled' }
-    ];
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [ehrRecords, setEhrRecords] = useState<EHRRecord[]>(() => {
@@ -100,34 +101,33 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setRooms(prev => [...prev, newRoom]);
   };
 
-const addAppointment = (appointmentData: Omit<Appointment, 'id'>) => {
+  const addAppointment = (appointmentData: Omit<Appointment, 'id'>) => {
     const doctor = doctors.find(d => d.id === appointmentData.doctorId);
     const room = rooms.find(r => r.id === appointmentData.roomId);
 
     if (doctor && room) {
       const isGeral = room.description === "Geral";
       const isCompatible = room.description === doctor.specialty;
-
-      // Se não for geral nem compatível, bloqueia o agendamento
-      if (!isGeral && !isCompatible) {
-        return false; 
-      }
+      if (!isGeral && !isCompatible) return false; 
     }
 
-    // 2. Mantém o check de conflito de horário que já tínhamos
-    if (checkConflict(appointmentData)) {
-      return false;
-    }
+    if (checkConflict(appointmentData)) return false;
 
-    const newApp: Appointment = {
-      ...appointmentData,
-      id: Math.random().toString(36).substr(2, 9),
-    };
+    const newApp: Appointment = { ...appointmentData, id: Math.random().toString(36).substr(2, 9) };
     setAppointments(prev => [...prev, newApp]);
     return true;
   };
 
-  // FUNÇÕES DE ATUALIZAÇÃO (UPDATE)
+  // 2. IMPLEMENTAÇÃO: Funções de Remoção
+  const removeDoctor = (id: string) => {
+    setDoctors(prev => prev.filter(doc => doc.id !== id));
+  };
+
+  const removeRoom = (id: string) => {
+    setRooms(prev => prev.filter(room => room.id !== id));
+  };
+
+  // FUNÇÕES DE ATUALIZAÇÃO
   const updatePatient = (id: string, updates: Partial<Patient>) => {
     setPatients(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
   };
@@ -165,7 +165,8 @@ const addAppointment = (appointmentData: Omit<Appointment, 'id'>) => {
       appointments, setAppointments,
       ehrRecords, setEhrRecords,
       addPatient, addDoctor, addRoom, addAppointment,
-      updatePatient, updateDoctor, updateRoom, updateAppointment
+      updatePatient, updateDoctor, updateRoom, updateAppointment,
+      removeDoctor, removeRoom // 3. EXPORTADO AQUI
     }}>
       {children}
     </ClinicContext.Provider>
