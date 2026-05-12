@@ -22,6 +22,7 @@ interface ClinicContextType {
   
   doctorSchedules: Record<string, string[]>;
   updateDoctorSchedule: (doctorName: string, slots: string[]) => void;
+  canDoctorAccessPatient: (doctorId: string, patientId: string) => boolean; 
   
   // Helpers de Criação
   addPatient: (patient: Omit<Patient, 'id' | 'createdAt'>) => void;
@@ -172,6 +173,18 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
   };
 
+  const canDoctorAccessPatient = (doctorId: string, patientId: string) => {
+    
+    if (currentUser?.role === UserRole.RECEPTIONIST) return false;
+
+    // Verifica se existe pelo menos uma consulta marcada entre este médico e este paciente
+    // que não tenha sido cancelada.
+    return appointments.some(app => 
+      app.doctorId === doctorId && 
+      app.patientId === patientId
+  );
+};
+
   return (
     <ClinicContext.Provider value={{
       currentUser, setCurrentUser,
@@ -183,7 +196,8 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       doctorSchedules, updateDoctorSchedule,
       addPatient, addDoctor, addRoom, addAppointment,
       updatePatient, updateDoctor, updateRoom, updateAppointment,
-      removePatient, removeDoctor, removeRoom, removeAppointment // Adicionado aqui
+      removePatient, removeDoctor, removeRoom, removeAppointment, canDoctorAccessPatient// Adicionado aqui
+      
     }}>
       {children}
     </ClinicContext.Provider>
