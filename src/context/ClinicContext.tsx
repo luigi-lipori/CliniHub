@@ -55,16 +55,16 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [doctors, setDoctors] = useState<Doctor[]>(() => {
     const saved = localStorage.getItem('clinihub_doctors');
     return saved ? JSON.parse(saved) : [
-      { id: 'dr-1', name: 'Dr. Valêncio', crm: '12345-PR', specialty: 'Cardiologia', email: 'valencio@clinihub.com' },
-      { id: 'dr-2', name: 'Dra. Deborah', crm: '67890-PR', specialty: 'Pediatria', email: 'deborah@clinihub.com' }
+      { id: 'dr-1', name: 'Dr. Valêncio', crm: '12345-PR', specialty: 'Cardiologia', email: 'valencio@clinihub.com', password: '1234' },
+      { id: 'dr-2', name: 'Dra. Deborah', crm: '67890-PR', specialty: 'Pediatria', email: 'deborah@clinihub.com', password: '1234' }
     ];
   });
 
   const [rooms, setRooms] = useState<Room[]>(() => {
     const saved = localStorage.getItem('clinihub_rooms');
     return saved ? JSON.parse(saved) : [
-      { id: 'sala-1', name: 'Sala 01', inMaintenance: false },
-      { id: 'sala-2', name: 'Sala 02', inMaintenance: false }
+      { id: 'sala-1', name: 'Sala 01', description: 'Geral',inMaintenance: false },
+      { id: 'sala-2', name: 'Sala 02', description: 'Pediatria', inMaintenance: false }
     ];
   });
 
