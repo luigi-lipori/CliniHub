@@ -5,9 +5,10 @@
 
 import React, { useState } from 'react';
 import { useClinic } from '../context/ClinicContext';
+// Adicionado Trash2 aos imports
 import { 
   UserCircle, Shield, ArrowRight, Plus, X, Check, 
-  Mail, Award, Contact, ChevronDown, Lock, AlertCircle 
+  Mail, Award, Contact, ChevronDown, Lock, AlertCircle, Trash2 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -18,17 +19,18 @@ const SPECIALTIES = [
 ];
 
 export const DoctorList: React.FC<{ onAccessRestrito: (doctorName: string) => void }> = ({ onAccessRestrito }) => {
-  const { doctors, addDoctor } = useClinic();
+  // Extraído removeDoctor do context
+  const { doctors, addDoctor, removeDoctor } = useClinic();
   
   const [isAdding, setIsAdding] = useState(false);
-  const [crmError, setCrmError] = useState(false); // Estado para erro de CRM duplicado
+  const [crmError, setCrmError] = useState(false);
   
   const [newDoctorData, setNewDoctorData] = useState({
     name: '',
     specialty: 'Clínica Médica',
     crm: '',
     email: '',
-    password: '' // Novo campo de senha
+    password: ''
   });
 
   const [selectedDoctor, setSelectedDoctor] = useState<any | null>(null);
@@ -39,17 +41,15 @@ export const DoctorList: React.FC<{ onAccessRestrito: (doctorName: string) => vo
     e.preventDefault();
     setCrmError(false);
 
-    // 1. Validação de CRM Único
     const crmExists = doctors.some(doc => 
       doc.crm.trim().toLowerCase() === newDoctorData.crm.trim().toLowerCase()
     );
     
     if (crmExists) {
       setCrmError(true);
-      return; // Interrompe o salvamento
+      return;
     }
 
-    // 2. Validação básica de campos
     if (!newDoctorData.name.trim() || !newDoctorData.password.trim()) {
         alert("Nome e Senha são obrigatórios.");
         return;
@@ -60,17 +60,15 @@ export const DoctorList: React.FC<{ onAccessRestrito: (doctorName: string) => vo
       specialty: newDoctorData.specialty,
       crm: newDoctorData.crm || '00000-UF',
       email: newDoctorData.email || 'contato@clinihub.com',
-      password: newDoctorData.password // Enviando a senha escolhida
+      password: newDoctorData.password
     });
 
-    // Reset de estados
     setNewDoctorData({ name: '', specialty: 'Clínica Médica', crm: '', email: '', password: '' });
     setIsAdding(false);
   };
 
   const handleAccess = (e: React.FormEvent) => {
     e.preventDefault();
-    // 3. Validação com a senha específica do médico selecionado
     if (selectedDoctor && passwordInput === selectedDoctor.password) {
       onAccessRestrito(selectedDoctor.name);
       setSelectedDoctor(null);
@@ -113,7 +111,6 @@ export const DoctorList: React.FC<{ onAccessRestrito: (doctorName: string) => vo
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              {/* Nome */}
               <div className="relative">
                 <UserCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input 
@@ -122,7 +119,6 @@ export const DoctorList: React.FC<{ onAccessRestrito: (doctorName: string) => vo
                 />
               </div>
 
-              {/* Especialidade */}
               <div className="relative">
                 <Award className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 z-10" />
                 <select 
@@ -137,7 +133,6 @@ export const DoctorList: React.FC<{ onAccessRestrito: (doctorName: string) => vo
                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
               </div>
 
-              {/* CRM com erro visual se duplicado */}
               <div className="relative">
                 <Contact className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${crmError ? 'text-red-500' : 'text-slate-400'}`} />
                 <input 
@@ -148,7 +143,6 @@ export const DoctorList: React.FC<{ onAccessRestrito: (doctorName: string) => vo
                 />
               </div>
 
-              {/* Email */}
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input 
@@ -157,7 +151,6 @@ export const DoctorList: React.FC<{ onAccessRestrito: (doctorName: string) => vo
                 />
               </div>
 
-              {/* Senha personalizada */}
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input 
@@ -190,8 +183,21 @@ export const DoctorList: React.FC<{ onAccessRestrito: (doctorName: string) => vo
             key={doctor.id}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow group"
+            className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow group relative"
           >
+            {/* Botão de excluir adicionado aqui */}
+            <button 
+              onClick={() => {
+                if (window.confirm(`Deseja realmente excluir o(a) Dr(a). ${doctor.name}?`)) {
+                  removeDoctor(doctor.id);
+                }
+              }}
+              className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+              title="Excluir médico"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+
             <div className="flex items-start justify-between mb-4">
               <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-secondary/10 group-hover:text-secondary transition-colors">
                 <UserCircle className="w-8 h-8" />
