@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useClinic } from '../context/ClinicContext';
-import { Plus, Search, ChevronLeft, ChevronRight, ChevronDown, User } from 'lucide-react';
+import { Plus, Search, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AppointmentStatus } from '../types';
 
@@ -53,7 +53,7 @@ export const AppointmentDashboard: React.FC<{ onNewAppointment: () => void }> = 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filtra as consultas da agenda
+  // Filtra as consultas da agenda globalmente
   const filteredAppointments = appointments.filter(app => {
     if (selectedRoom !== 'all' && app.roomId !== selectedRoom) return false;
     if (selectedDoctor !== 'all' && app.doctorId !== selectedDoctor) return false;
@@ -152,35 +152,43 @@ export const AppointmentDashboard: React.FC<{ onNewAppointment: () => void }> = 
         
         <div className="max-h-[600px] overflow-y-auto">
           {TIME_SLOTS.map((time) => (
-            <div key={time} className="grid grid-cols-[80px_1fr_1fr_1fr_1fr_1fr_1fr_1fr] border-b border-slate-50 min-h-[55px]">
+            <div key={time} className="grid grid-cols-[80px_1fr_1fr_1fr_1fr_1fr_1fr_1fr] border-b border-slate-50 min-h-[65px]">
               <div className="p-2 text-[11px] font-bold text-slate-400 text-right border-r border-slate-100 bg-slate-50/20 flex items-center justify-end pr-4">
                 {time}
               </div>
 
               {Array.from({ length: 7 }).map((_, i) => {
                 const dayOfMonth = 11 + i;
-                const appointment = filteredAppointments.find(app => {
+                
+                // MUDANÇA AQUI: Usando .filter() em vez de .find() para pegar todas as consultas do horário
+                const slotAppointments = filteredAppointments.filter(app => {
                   const d = new Date(app.dateTime);
                   const appTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                   return d.getDate() === dayOfMonth && appTime === time;
                 });
 
                 return (
-                  <div key={i} className="border-r border-slate-50 p-1 hover:bg-blue-50/10 transition-colors relative">
-                    {appointment && (
+                  <div key={i} className="border-r border-slate-50 p-1 hover:bg-blue-50/10 transition-colors relative flex flex-col gap-1">
+                    {slotAppointments.map((appointment) => (
                       <motion.div 
+                        key={appointment.id}
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className={`h-full border-l-4 p-1.5 rounded shadow-sm overflow-hidden flex flex-col justify-center ${
+                        // Adicionando flex-1 para dividirem o espaço e min-h-0 para evitar transbordamento
+                        className={`flex-1 min-h-0 w-full border-l-4 p-1.5 rounded shadow-sm overflow-hidden flex flex-col justify-center ${
                             appointment.status === AppointmentStatus.CANCELLED ? 'bg-slate-100 border-slate-300 text-slate-500' :
                             appointment.status === AppointmentStatus.COMPLETED ? 'bg-emerald-50 border-emerald-500 text-emerald-700' :
                             'bg-secondary/10 border-secondary text-secondary-dark'
                           }`}
+                        title={`${appointment.patientName} com ${appointment.doctorName}`} // Adiciona um tooltip nativo ao passar o mouse
                       >
                         <div className="text-[10px] font-bold truncate leading-tight">{appointment.patientName}</div>
-                        <div className="text-[9px] opacity-70 truncate italic">{appointment.doctorName}</div>
+                        {/* Se houver muitos agendamentos na mesma célula, oculta o nome do médico para não quebrar a UI visualmente */}
+                        {slotAppointments.length < 3 && (
+                          <div className="text-[8px] opacity-70 truncate italic mt-0.5">{appointment.doctorName}</div>
+                        )}
                       </motion.div>
-                    )}
+                    ))}
                   </div>
                 );
               })}
