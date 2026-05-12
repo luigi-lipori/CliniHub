@@ -36,6 +36,7 @@ export interface Doctor {
   crm: string;
   specialty: string;
   email: string;
+  password: string; // Para fins de autenticação
   availability?: DoctorAvailability[];
 }
 
