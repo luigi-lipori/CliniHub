@@ -14,7 +14,7 @@ const SPECIALTIES = [
   "Neurologia", "Endocrinologia"
 ];
 
-export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }> = ({ onAccessEHR }) => {
+export const DoctorList: React.FC<{ onAccessRestrito: (doctorName: string) => void }> = ({ onAccessRestrito }) => {
   const { doctors, addDoctor } = useClinic();
   
   const [isAdding, setIsAdding] = useState(false);
@@ -62,12 +62,12 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
     setIsAdding(false);
   };
 
-  const handleAccess = (e: React.FormEvent) => {
+const handleAccess = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedDoctor && passwordInput === selectedDoctor.password) {
-      onAccessEHR(selectedDoctor.name);
-      setSelectedDoctor(null);
-      setPasswordInput('');
+    if (password === '1234') {
+      onAccessRestrito(passwordModal!); // Mudança aqui
+      setPasswordModal(null);
+      setPassword('');
       setErrorModal(false);
     } else {
       setErrorModal(true);
@@ -200,8 +200,8 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
               onClick={() => setSelectedDoctor(doctor)}
               className="w-full flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-secondary transition-colors"
             >
-              <Shield className="w-4 h-4" />
-              Acessar Prontuários
+              <Shield className="w-4 h-4" /> {/* Você pode trocar por <Lock className="w-4 h-4" /> se importar do lucide-react */}
+              Acesso Restrito
               <ArrowRight className="w-4 h-4 ml-1" />
             </button>
           </motion.div>

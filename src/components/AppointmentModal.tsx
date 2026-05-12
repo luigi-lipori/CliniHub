@@ -27,13 +27,14 @@ interface AppointmentModalProps {
 }
 
 export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onClose }) => {
-  const { patients, doctors, rooms, addAppointment } = useClinic();
+  // 1. Extraímos o doctorSchedules do Contexto
+  const { patients, doctors, rooms, addAppointment, doctorSchedules } = useClinic();
   
   const [formData, setFormData] = useState({
     patientId: '',
     doctorId: '',
     roomId: '',
-    date: '2026-05-11',
+    date: new Date().toISOString().split('T')[0], // Atualizado para a data de hoje por padrão
     time: '08:00',
     duration: 20,
   });
@@ -46,16 +47,12 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onCl
 
   // --- REGRA DE FILTRAGEM DE SALAS ---
   const availableRooms = useMemo(() => {
-    // Se nenhum médico foi selecionado, mostramos apenas salas que não estão em manutenção
     if (!formData.doctorId) return rooms.filter(r => !r.inMaintenance);
 
     const selectedDoctor = doctors.find(d => d.id === formData.doctorId);
     
     return rooms.filter(room => {
-      // Regra: Não pode estar em manutenção
       if (room.inMaintenance) return false;
-      
-      // Regra: Sala deve ser "Geral" OU ter a mesma descrição/especialidade do médico
       return room.description === "Geral" || room.description === selectedDoctor?.specialty;
     });
   }, [rooms, formData.doctorId, doctors]);
@@ -67,6 +64,42 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onCl
     );
   }, [patients, patientSearch]);
 
+  // --- REGRAS DE FILTRAGEM DE GRADE DE HORÁRIOS ---
+  const getScheduleDayIndex = (dateString: string) => {
+    if (!dateString) return 0;
+    const [year, month, day] = dateString.split('-');
+    const date = new Date(Number(year), Number(month) - 1, Number(day));
+    const jsDay = date.getDay(); // 0 é Domingo, 1 é Segunda...
+    return (jsDay + 6) % 7; // Converte para: 0=Seg, 1=Ter... 6=Dom
+  };
+
+  const availableTimeSlots = useMemo(() => {
+    if (!formData.doctorId || !formData.date) return [];
+    
+    const selectedDoctor = doctors.find(d => d.id === formData.doctorId);
+    if (!selectedDoctor) return [];
+
+    const schedule = doctorSchedules[selectedDoctor.name];
+    
+    // Se o médico ainda não configurou a grade, ele não tem horários disponíveis
+    if (!schedule || schedule.length === 0) return [];
+
+    const dayIndex = getScheduleDayIndex(formData.date);
+    
+    // Filtra o array TIME_SLOTS mantendo apenas os que estão pintados de verde na grade
+    return TIME_SLOTS.filter(time => schedule.includes(`${dayIndex}-${time}`));
+  }, [formData.doctorId, formData.date, doctors, doctorSchedules]);
+
+  // Atualiza o input de horário quando a lista disponível muda (troca de médico ou dia)
+  useEffect(() => {
+    if (availableTimeSlots.length > 0 && !availableTimeSlots.includes(formData.time)) {
+      setFormData(prev => ({ ...prev, time: availableTimeSlots[0] }));
+    } else if (availableTimeSlots.length === 0) {
+      setFormData(prev => ({ ...prev, time: '' }));
+    }
+  }, [availableTimeSlots]);
+
+  // Fechar dropdown de pacientes ao clicar fora
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (patientRef.current && !patientRef.current.contains(event.target as Node)) {
@@ -85,8 +118,8 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onCl
     const selectedDoctor = doctors.find(d => d.id === formData.doctorId);
     const selectedRoom = rooms.find(r => r.id === formData.roomId);
 
-    if (!selectedPatient || !selectedDoctor || !selectedRoom) {
-      setError('Por favor, selecione um paciente, médico e sala.');
+    if (!selectedPatient || !selectedDoctor || !selectedRoom || !formData.time) {
+      setError('Por favor, preencha todos os campos obrigatórios corretamente.');
       return;
     }
 
@@ -110,7 +143,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onCl
         onClose();
       }, 1500);
     } else {
-      setError('Choque de horário! O médico ou a sala já estão ocupados.');
+      setError('Choque de horário! O médico ou a sala já estão ocupados neste momento.');
     }
   };
 
@@ -144,6 +177,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onCl
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
+                {/* BUSCA DE PACIENTE */}
                 <div className="space-y-2 md:col-span-2 relative" ref={patientRef}>
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                     <User className="w-3 h-3" /> Paciente
@@ -198,6 +232,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onCl
                   </AnimatePresence>
                 </div>
 
+                {/* MÉDICO */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                     <User className="w-3 h-3" /> Médico
@@ -206,7 +241,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onCl
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-secondary/20"
                     value={formData.doctorId}
                     onChange={(e) => {
-                      setFormData(prev => ({ ...prev, doctorId: e.target.value, roomId: '' })); // Resetamos a sala ao trocar o médico
+                      setFormData(prev => ({ ...prev, doctorId: e.target.value, roomId: '' }));
                     }}
                     required
                   >
@@ -215,6 +250,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onCl
                   </select>
                 </div>
 
+                {/* SALA */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                     <DoorOpen className="w-3 h-3" /> Sala Disponível
@@ -223,7 +259,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onCl
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-secondary/20 disabled:opacity-50"
                     value={formData.roomId}
                     onChange={(e) => setFormData(prev => ({ ...prev, roomId: e.target.value }))}
-                    disabled={!formData.doctorId} // Só deixa escolher a sala após escolher o médico
+                    disabled={!formData.doctorId}
                     required
                   >
                     <option value="">Selecione a sala...</option>
@@ -235,6 +271,7 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onCl
                   </select>
                 </div>
 
+                {/* DATA */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                     <Calendar className="w-3 h-3" /> Data
@@ -247,20 +284,25 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onCl
                   />
                 </div>
 
+                {/* HORÁRIO ATUALIZADO */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                     <Clock className="w-3 h-3" /> Horário
                   </label>
                   <select 
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-secondary/20"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-secondary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     value={formData.time}
                     onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+                    disabled={!formData.doctorId || availableTimeSlots.length === 0}
+                    required
                   >
-                    {TIME_SLOTS.map(slot => <option key={slot} value={slot}>{slot}</option>)}
+                    <option value="">{availableTimeSlots.length === 0 ? 'Sem horários' : 'Selecione o horário...'}</option>
+                    {availableTimeSlots.map(slot => <option key={slot} value={slot}>{slot}</option>)}
                   </select>
                 </div>
               </div>
 
+              {/* AVISOS E BOTÃO DE SUBMIT */}
               <div className="pt-2">
                 {formData.doctorId && availableRooms.length === 0 && (
                   <p className="text-[10px] text-danger font-bold uppercase mb-4 text-center">
@@ -268,9 +310,15 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({ isOpen, onCl
                   </p>
                 )}
                 
+                {formData.doctorId && formData.date && availableTimeSlots.length === 0 && (
+                  <p className="text-[10px] text-danger font-bold uppercase mb-4 text-center">
+                    O médico não configurou a grade ou não atende neste dia da semana.
+                  </p>
+                )}
+                
                 <button 
                   type="submit"
-                  disabled={status === 'success' || (formData.doctorId && availableRooms.length === 0)}
+                  disabled={status === 'success' || (formData.doctorId && availableRooms.length === 0) || availableTimeSlots.length === 0}
                   className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${
                     status === 'success' ? 'bg-success text-white' : 'bg-secondary text-white shadow-secondary/20 disabled:bg-slate-300 disabled:shadow-none'
                   }`}
