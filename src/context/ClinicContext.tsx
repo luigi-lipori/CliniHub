@@ -20,14 +20,13 @@ interface ClinicContextType {
   ehrRecords: EHRRecord[];
   setEhrRecords: React.Dispatch<React.SetStateAction<EHRRecord[]>>;
   
-  // --- NOVAS TIPAGENS DA GRADE DE HORÁRIOS ---
   doctorSchedules: Record<string, string[]>;
   updateDoctorSchedule: (doctorName: string, slots: string[]) => void;
   
   // Helpers de Criação
   addPatient: (patient: Omit<Patient, 'id' | 'createdAt'>) => void;
   addDoctor: (doctor: Omit<Doctor, 'id'>) => void; 
-  addRoom: (room: Omit<Room, 'id'>) => void;    
+  addRoom: (room: Omit<Room, 'id'>) => void;     
   addAppointment: (appointment: Omit<Appointment, 'id'>) => boolean;
 
   // Helpers de Edição
@@ -35,6 +34,12 @@ interface ClinicContextType {
   updateDoctor: (id: string, updates: Partial<Doctor>) => void;
   updateRoom: (id: string, updates: Partial<Room>) => void;
   updateAppointment: (id: string, updates: Partial<Appointment>) => void;
+
+  // --- NOVOS HELPERS DE EXCLUSÃO (LIXO) ---
+  removePatient: (id: string) => void;
+  removeDoctor: (id: string) => void;
+  removeRoom: (id: string) => void;
+  removeAppointment: (id: string) => void;
 }
 
 const ClinicContext = createContext<ClinicContextType | undefined>(undefined);
@@ -47,32 +52,22 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const [patients, setPatients] = useState<Patient[]>(() => {
     const saved = localStorage.getItem('clinihub_patients');
-    return saved ? JSON.parse(saved) : [
-       { id: '1', name: 'João Silva', cpf: '123.456.789-00', birthDate: '1985-05-20', phone: '(41) 99999-9999', createdAt: new Date().toISOString() }
-    ];
+    return saved ? JSON.parse(saved) : []; // Removi os dados iniciais conforme solicitado anteriormente
   });
 
   const [doctors, setDoctors] = useState<Doctor[]>(() => {
     const saved = localStorage.getItem('clinihub_doctors');
-    return saved ? JSON.parse(saved) : [
-      { id: 'dr-1', name: 'Dr. Valêncio', crm: '12345-PR', specialty: 'Cardiologia', email: 'valencio@clinihub.com', password: '1234' },
-      { id: 'dr-2', name: 'Dra. Deborah', crm: '67890-PR', specialty: 'Pediatria', email: 'deborah@clinihub.com', password: '1234' }
-    ];
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [rooms, setRooms] = useState<Room[]>(() => {
     const saved = localStorage.getItem('clinihub_rooms');
-    return saved ? JSON.parse(saved) : [
-      { id: 'sala-1', name: 'Sala 01', description: 'Geral',inMaintenance: false },
-      { id: 'sala-2', name: 'Sala 02', description: 'Pediatria', inMaintenance: false }
-    ];
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
     const saved = localStorage.getItem('clinihub_appointments');
-    return saved ? JSON.parse(saved) : [
-      { id: 'app-1', patientId: '1', patientName: 'João Silva', doctorId: 'dr-1', doctorName: 'Dr. Valêncio', roomId: 'sala-1', roomName: 'Sala 01', dateTime: new Date().toISOString(), durationMinutes: 30, status: 'scheduled' }
-    ];
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [ehrRecords, setEhrRecords] = useState<EHRRecord[]>(() => {
@@ -80,7 +75,6 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return saved ? JSON.parse(saved) : [];
   });
 
-  // --- NOVO ESTADO DA GRADE DE HORÁRIOS ---
   const [doctorSchedules, setDoctorSchedules] = useState<Record<string, string[]>>(() => {
     const saved = localStorage.getItem('clinihub_schedules');
     return saved ? JSON.parse(saved) : {};
@@ -93,16 +87,10 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => { localStorage.setItem('clinihub_rooms', JSON.stringify(rooms)); }, [rooms]);
   useEffect(() => { localStorage.setItem('clinihub_appointments', JSON.stringify(appointments)); }, [appointments]);
   useEffect(() => { localStorage.setItem('clinihub_ehr', JSON.stringify(ehrRecords)); }, [ehrRecords]);
-  
-  // --- NOVA PERSISTÊNCIA DA GRADE ---
   useEffect(() => { localStorage.setItem('clinihub_schedules', JSON.stringify(doctorSchedules)); }, [doctorSchedules]);
 
-  // --- FUNÇÃO PARA ATUALIZAR A GRADE ---
   const updateDoctorSchedule = (doctorName: string, slots: string[]) => {
-    setDoctorSchedules(prev => ({
-      ...prev,
-      [doctorName]: slots
-    }));
+    setDoctorSchedules(prev => ({ ...prev, [doctorName]: slots }));
   };
 
   // FUNÇÕES DE ADIÇÃO
@@ -128,27 +116,17 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (doctor && room) {
       const isGeral = room.description === "Geral";
       const isCompatible = room.description === doctor.specialty;
-
-      // Se não for geral nem compatível, bloqueia o agendamento
-      if (!isGeral && !isCompatible) {
-        return false; 
-      }
+      if (!isGeral && !isCompatible) return false; 
     }
 
-    // 2. Mantém o check de conflito de horário que já tínhamos
-    if (checkConflict(appointmentData)) {
-      return false;
-    }
+    if (checkConflict(appointmentData)) return false;
 
-    const newApp: Appointment = {
-      ...appointmentData,
-      id: Math.random().toString(36).substr(2, 9),
-    };
+    const newApp: Appointment = { ...appointmentData, id: Math.random().toString(36).substr(2, 9) };
     setAppointments(prev => [...prev, newApp]);
     return true;
   };
 
-  // FUNÇÕES DE ATUALIZAÇÃO (UPDATE)
+  // FUNÇÕES DE ATUALIZAÇÃO
   const updatePatient = (id: string, updates: Partial<Patient>) => {
     setPatients(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
   };
@@ -163,6 +141,23 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const updateAppointment = (id: string, updates: Partial<Appointment>) => {
     setAppointments(prev => prev.map(app => app.id === id ? { ...app, ...updates } : app));
+  };
+
+  // --- NOVAS FUNÇÕES DE EXCLUSÃO (REMOVE) ---
+  const removePatient = (id: string) => {
+    setPatients(prev => prev.filter(p => p.id !== id));
+  };
+
+  const removeDoctor = (id: string) => {
+    setDoctors(prev => prev.filter(d => d.id !== id));
+  };
+
+  const removeRoom = (id: string) => {
+    setRooms(prev => prev.filter(r => r.id !== id));
+  };
+
+  const removeAppointment = (id: string) => {
+    setAppointments(prev => prev.filter(app => app.id !== id));
   };
 
   const checkConflict = (newApp: Omit<Appointment, 'id'>) => {
@@ -185,9 +180,10 @@ export const ClinicProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       rooms, setRooms,
       appointments, setAppointments,
       ehrRecords, setEhrRecords,
-      doctorSchedules, updateDoctorSchedule, // --- ADICIONADO AQUI NO PROVIDER ---
+      doctorSchedules, updateDoctorSchedule,
       addPatient, addDoctor, addRoom, addAppointment,
-      updatePatient, updateDoctor, updateRoom, updateAppointment
+      updatePatient, updateDoctor, updateRoom, updateAppointment,
+      removePatient, removeDoctor, removeRoom, removeAppointment // Adicionado aqui
     }}>
       {children}
     </ClinicContext.Provider>
