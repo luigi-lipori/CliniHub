@@ -5,21 +5,13 @@
 
 import React, { useState } from 'react';
 import { useClinic } from '../context/ClinicContext';
-import { UserCircle, Shield, ArrowRight, Plus, X, Check, Mail, Award, Contact, ChevronDown } from 'lucide-react';
+import { UserCircle, Shield, ArrowRight, Plus, X, Check, Mail, Award, Contact, ChevronDown, Lock, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-// Lista das 10 principais especialidades clínicas
 const SPECIALTIES = [
-  "Clínica Médica",
-  "Cardiologia",
-  "Pediatria",
-  "Dermatologia",
-  "Ginecologia",
-  "Ortopedia",
-  "Psiquiatria",
-  "Oftalmologia",
-  "Neurologia",
-  "Endocrinologia"
+  "Clínica Médica", "Cardiologia", "Pediatria", "Dermatologia", 
+  "Ginecologia", "Ortopedia", "Psiquiatria", "Oftalmologia", 
+  "Neurologia", "Endocrinologia"
 ];
 
 export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }> = ({ onAccessEHR }) => {
@@ -28,36 +20,54 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
   const [isAdding, setIsAdding] = useState(false);
   const [newDoctorData, setNewDoctorData] = useState({
     name: '',
-    specialty: 'Clínica Médica', // Valor padrão inicial
+    specialty: 'Clínica Médica',
     crm: '',
-    email: ''
+    email: '',
+    password: ''
   });
 
-  const [passwordModal, setPasswordModal] = useState<string | null>(null);
-  const [password, setPassword] = useState('');
+  const [selectedDoctor, setSelectedDoctor] = useState<any | null>(null);
+  const [passwordInput, setPasswordInput] = useState('');
   const [errorModal, setErrorModal] = useState(false);
+  
+  // Estado para erro de CRM duplicado
+  const [crmError, setCrmError] = useState(false);
 
   const handleSaveDoctor = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDoctorData.name.trim()) return;
+    setCrmError(false);
+
+    // 1. Validação de CRM Existente
+    const crmExists = doctors.some(doc => doc.crm.trim().toLowerCase() === newDoctorData.crm.trim().toLowerCase());
+    
+    if (crmExists) {
+      setCrmError(true);
+      return; // Interrompe a execução
+    }
+
+    if (!newDoctorData.name.trim() || !newDoctorData.password.trim()) {
+        alert("Nome e Senha são obrigatórios");
+        return;
+    }
 
     addDoctor({
       name: newDoctorData.name,
       specialty: newDoctorData.specialty,
       crm: newDoctorData.crm || '00000-UF',
-      email: newDoctorData.email || 'contato@clinihub.com'
+      email: newDoctorData.email || 'contato@clinihub.com',
+      password: newDoctorData.password
     });
 
-    setNewDoctorData({ name: '', specialty: 'Clínica Médica', crm: '', email: '' });
+    setNewDoctorData({ name: '', specialty: 'Clínica Médica', crm: '', email: '', password: '' });
     setIsAdding(false);
   };
 
   const handleAccess = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === '1234') {
-      onAccessEHR(passwordModal!);
-      setPasswordModal(null);
-      setPassword('');
+    if (selectedDoctor && passwordInput === selectedDoctor.password) {
+      onAccessEHR(selectedDoctor.name);
+      setSelectedDoctor(null);
+      setPasswordInput('');
       setErrorModal(false);
     } else {
       setErrorModal(true);
@@ -72,11 +82,9 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
         <h2 className="text-2xl font-bold text-primary">Corpo Clínico</h2>
         
         <button 
-          onClick={() => setIsAdding(!isAdding)}
+          onClick={() => { setIsAdding(!isAdding); setCrmError(false); }}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-md ${
-            isAdding 
-            ? 'bg-slate-100 text-slate-500' 
-            : 'bg-primary text-white hover:bg-primary/90 shadow-primary/10'
+            isAdding ? 'bg-slate-100 text-slate-500' : 'bg-primary text-white hover:bg-primary/90'
           }`}
         >
           {isAdding ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
@@ -97,8 +105,7 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
               <Award className="w-4 h-4" /> Cadastrar Profissional
             </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Nome */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="relative">
                 <UserCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input 
@@ -107,7 +114,6 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
                 />
               </div>
 
-              {/* Especialidade (Select Listado) */}
               <div className="relative">
                 <Award className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 z-10" />
                 <select 
@@ -122,16 +128,17 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
               </div>
 
-              {/* CRM */}
+              {/* CAMPO CRM COM VALIDAÇÃO */}
               <div className="relative">
-                <Contact className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <Contact className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${crmError ? 'text-red-500' : 'text-slate-400'}`} />
                 <input 
-                  type="text" placeholder="CRM" className={inputClassName}
-                  value={newDoctorData.crm} onChange={(e) => setNewDoctorData(p => ({...p, crm: e.target.value}))}
+                  type="text" placeholder="CRM" 
+                  className={`${inputClassName} ${crmError ? 'border-red-500 ring-red-50 focus:border-red-500 focus:ring-red-200' : ''}`}
+                  value={newDoctorData.crm} onChange={(e) => { setNewDoctorData(p => ({...p, crm: e.target.value})); setCrmError(false); }}
+                  required
                 />
               </div>
 
-              {/* Email */}
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input 
@@ -139,10 +146,26 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
                   value={newDoctorData.email} onChange={(e) => setNewDoctorData(p => ({...p, email: e.target.value}))}
                 />
               </div>
+
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <input 
+                  type="password" placeholder="Senha" className={inputClassName}
+                  value={newDoctorData.password} onChange={(e) => setNewDoctorData(p => ({...p, password: e.target.value}))}
+                  required
+                />
+              </div>
             </div>
 
+            {crmError && (
+              <div className="flex items-center gap-2 text-red-600 text-sm font-semibold bg-red-50 p-3 rounded-lg border border-red-100">
+                <AlertCircle className="w-4 h-4" />
+                Este CRM já está cadastrado no sistema.
+              </div>
+            )}
+
             <div className="flex justify-end pt-2">
-              <button type="submit" className="bg-secondary text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/10">
+              <button type="submit" className="bg-secondary text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-secondary/90 transition-all shadow-lg">
                 <Check className="w-5 h-5" /> Salvar Médico
               </button>
             </div>
@@ -150,6 +173,7 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
         )}
       </AnimatePresence>
 
+      {/* ... Restante do código dos Cards e Modal de Senha permanecem iguais ... */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {doctors.map((doctor) => (
           <motion.div 
@@ -173,7 +197,7 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
             </p>
             
             <button 
-              onClick={() => setPasswordModal(doctor.name)}
+              onClick={() => setSelectedDoctor(doctor)}
               className="w-full flex items-center justify-center gap-2 py-3 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-secondary transition-colors"
             >
               <Shield className="w-4 h-4" />
@@ -185,7 +209,7 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
       </div>
 
       <AnimatePresence>
-        {passwordModal && (
+        {selectedDoctor && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
@@ -193,20 +217,21 @@ export const DoctorList: React.FC<{ onAccessEHR: (doctorName: string) => void }>
               exit={{ opacity: 0, y: 20 }}
               className="bg-white w-full max-w-sm rounded-3xl p-8 shadow-2xl relative"
             >
-              <button onClick={() => setPasswordModal(null)} className="absolute top-6 right-6 text-slate-400">&times;</button>
+              <button onClick={() => { setSelectedDoctor(null); setErrorModal(false); setPasswordInput(''); }} className="absolute top-6 right-6 text-slate-400">&times;</button>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 bg-secondary/10 text-secondary rounded-full flex items-center justify-center mx-auto mb-4">
                   <Shield className="w-8 h-8" />
                 </div>
                 <h3 className="text-xl font-bold text-primary">Acesso Restrito</h3>
-                <p className="text-sm text-slate-500 mt-2">{passwordModal}</p>
+                <p className="text-sm text-slate-500 mt-2">{selectedDoctor.name}</p>
               </div>
               <form onSubmit={handleAccess} className="space-y-4">
                 <input 
-                  type="password" placeholder="••••••••" autoFocus
-                  className={`w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 ${errorModal ? 'border-danger ring-danger/10' : 'border-slate-200 ring-secondary/10'}`}
-                  value={password} onChange={(e) => setPassword(e.target.value)}
+                  type="password" placeholder="Digite sua senha" autoFocus
+                  className={`w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 ${errorModal ? 'border-red-500 ring-red-100' : 'border-slate-200 ring-secondary/10'}`}
+                  value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)}
                 />
+                {errorModal && <p className="text-xs text-red-500 font-medium">Senha incorreta. Tente novamente.</p>}
                 <button type="submit" className="w-full py-4 bg-secondary text-white rounded-xl font-bold shadow-lg">Confirmar</button>
               </form>
             </motion.div>
