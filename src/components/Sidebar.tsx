@@ -58,17 +58,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) =>
         })}
       </nav>
       
-      <div className="p-6 border-t border-white/10 bg-black/10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center border border-white/20">
-            <UserCircle className="w-6 h-6 text-slate-300" />
-          </div>
-          <div className="overflow-hidden">
-            <p className="text-sm font-semibold truncate">Admin User</p>
-            <p className="text-xs text-slate-400 truncate">Recepcionista</p>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 };

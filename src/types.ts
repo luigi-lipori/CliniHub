@@ -3,17 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export enum UserRole {
-  ADMIN = 'admin',
-  RECEPTIONIST = 'receptionist',
-  DOCTOR = 'doctor',
-}
+
 
 export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  role: UserRole;
   specialty?: string;
   crm?: string;
 }
@@ -36,7 +31,7 @@ export interface Doctor {
   crm: string;
   specialty: string;
   email: string;
-  password: string; // Para fins de autenticação
+  password: string;
   availability?: DoctorAvailability[];
 }
 
