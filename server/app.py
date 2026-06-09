@@ -165,6 +165,15 @@ def delete_patient(pid):
 
 
 # ─── DOCTORS ─────────────────────────────────────────────────────────────────
+# Rota pública — só retorna id, name e specialty (sem dados sensíveis)
+@app.route("/api/doctors/public", methods=["GET"])
+def get_doctors_public():
+    db = get_db()
+    doctors = rows_to_list(
+        db.execute("SELECT id, name, specialty FROM doctors ORDER BY name").fetchall()
+    )
+    db.close()
+    return jsonify(doctors)
 
 @app.route("/api/doctors", methods=["GET"])
 @jwt_required()

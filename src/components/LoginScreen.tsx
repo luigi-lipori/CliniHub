@@ -239,7 +239,7 @@ export const LoginScreen: React.FC = () => {
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                       <input
                         type="text"
-                        placeholder="Buscar pelo nome ou especialidade..."
+                        placeholder="Buscar pelo nome..."
                         autoFocus
                         className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary text-sm transition-all"
                         value={doctorSearch}
