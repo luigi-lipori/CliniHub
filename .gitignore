@@ -1,20 +1,18 @@
-# ── Frontend ──────────────────────────────────────────────────────────────────
+# Python
+env/
+venv/
+__pycache__/
+*.pyc
+
+# Banco de dados local
+*.db
+
+# Node
 node_modules/
 dist/
-build/
-coverage/
- 
-# ── Backend ───────────────────────────────────────────────────────────────────
-server/env/
-server/__pycache__/
-server/*.pyc
-server/clinihub.db
- 
-# ── Ambiente ──────────────────────────────────────────────────────────────────
-.env*
-!.env.example
- 
-# ── Sistema ───────────────────────────────────────────────────────────────────
-.DS_Store
-*.log
- 
+frontend/node_modules/
+frontend/dist/
+
+# Ambiente
+.env
+backend/.env
