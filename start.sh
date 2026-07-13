@@ -1,12 +1,10 @@
 #!/bin/bash
-
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-
 echo "Iniciando CliniHub..."
 
 # ── Backend ──────────────────────────────────────────────────────────────────
 echo "Subindo backend (Flask)..."
-cd "$ROOT/server"
+cd "$ROOT/backend"
 source env/bin/activate
 python app.py &
 BACKEND_PID=$!
@@ -24,7 +22,7 @@ done
 
 # ── Frontend ─────────────────────────────────────────────────────────────────
 echo "Subindo frontend (Vite)..."
-cd "$ROOT"
+cd "$ROOT/frontend"
 npm run dev &
 FRONTEND_PID=$!
 
@@ -37,5 +35,4 @@ echo "Pressione Ctrl+C para encerrar tudo."
 
 # Encerra ambos ao sair
 trap "echo ''; echo 'Encerrando...'; kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; exit 0" SIGINT SIGTERM
-
 wait
